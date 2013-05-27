@@ -27,15 +27,20 @@ public class BLAKE2_Hasher {
 		if (messageBlock.length > 128) {
 			splitArrayLength = CalculateSplitArrayLength(messageBlock);
 			
+			// Split array into 128 byte arrays
+			
 			for (int i = 0; i < splitArrayLength; i++) {
 				
-				for (int j = 0; j < 128; j++) {
-					
-					
-				}
+				byte[] tempArray = new byte[128];
+				int offset = splitArrayLength * 128;
+				
+				// this. will. break. for anything that isnt a multiple of 128
+				System.arraycopy(messageBlock, offset, tempArray, 0, 128);
+				
+				splitBlock[i] = tempArray;
 				
 			}
-			
+				
 		}
 		
 	}
