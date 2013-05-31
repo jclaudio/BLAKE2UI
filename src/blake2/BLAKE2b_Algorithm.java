@@ -1,5 +1,6 @@
 package blake2;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.nio.ByteBuffer;
 
@@ -69,11 +70,7 @@ public class BLAKE2b_Algorithm {
 		_isInitialized = true;
 	}
 	
-	@SuppressWarnings("unused")
-	
-	//Seemingly unused parameters.
-	//private long[] Compress(byte[] block, int start)
-	public void Compress()
+	public void Compress(byte[] block)
 	{
 		
 		long[] h = _h;
@@ -223,13 +220,28 @@ public class BLAKE2b_Algorithm {
 		h[7] ^= v7 ^ v15;
 	}
 	
+	public byte[] getHash() {
+		
+		byte[] output = new byte[64];
+		
+		for (int i = 0; i < _h.length; i++) {
+			byte[] buffer = new byte[8];
+			
+			buffer = longToByteArray(_h[i]);
+			
+			System.arraycopy(buffer, 0, output, i*8, 8);
+		}
+		
+		return output;
+	}
+	
 	// Conversion from long to byte array
- 
 	public long byteArrayToLong(byte[] b, int offset) {
 		ByteBuffer buf = ByteBuffer.wrap(b);
 		return buf.getLong(offset);
 	}
 	
+	// Conversion from byte array to long
 	public byte[] longToByteArray(long l) {
 		byte b[] = new byte[8];
 		ByteBuffer buf = ByteBuffer.wrap(b);
@@ -237,7 +249,7 @@ public class BLAKE2b_Algorithm {
 		return b;
 	}
 	
-	
+	// Converts bytes to a human-readable String of hex characters
 	public String bytesToHex(byte[] bytes) {
 	    final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 	    char[] hexChars = new char[bytes.length * 2];

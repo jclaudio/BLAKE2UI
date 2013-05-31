@@ -1,11 +1,14 @@
 package blake2;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class BLAKE2_Hasher {
 
 	private byte[] messageBlock;
-	private byte[][] splitBlock;
+	private ArrayList<byte[]> splitBlock = new ArrayList<byte[]>();
+	private byte[][] splitBlock_array;
 	private byte[] currentBlock = new byte[128];
 	
 	private int messageBlockLength;
@@ -26,27 +29,62 @@ public class BLAKE2_Hasher {
 		
 		if (messageBlock.length > 128) {
 			splitArrayLength = CalculateSplitArrayLength(messageBlock);
+			byte[] tempArray2 = new byte[128];
 			
-			// Split array into 128 byte arrays
-			
-			for (int i = 0; i < splitArrayLength; i++) {
+			// if the message block is a multiple of 128, copy directly
+			if (messageBlock.length % 128 == 0) {
 				
-				byte[] tempArray = new byte[128];
-				int offset = splitArrayLength * 128;
-				
-				// this. will. break. for anything that isnt a multiple of 128
-				System.arraycopy(messageBlock, offset, tempArray, 0, 128);
-				
-				splitBlock[i] = tempArray;
-				
+				for (int i = 0; i < splitArrayLength; i++) {
+					byte[] tempArray = new byte[128];
+					int offset = i * 128;
+					System.arraycopy(messageBlock, offset, tempArray, 0, 128);
+					
+					splitBlock.add(tempArray);
+				}
+			} else {
+				for (int i = 0; i < (splitArrayLength - 1); i++) {
+					byte[] tempArray = new byte[128];
+					int offset = i * 128;
+					System.arraycopy(messageBlock, offset, tempArray, 0, 128);
+					
+					splitBlock.add(tempArray);
+				}
+				// Last bit in the array
+				System.arraycopy(messageBlock, splitArrayLength, tempArray2, (splitArrayLength * 128) - 1, messageBlock.length - (splitArrayLength*128));
+				tempArray2 = PadBytes(tempArray2);
 			}
-				
+			splitBlock_array = new byte[splitBlock.size()][];
+			splitBlock_array = splitBlock.toArray(splitBlock_array);
 		}
-		
 	}
 	
 	public BLAKE2_Hasher(byte[] input) {
 		this.messageBlock = input;
+	}
+	
+	public String bytesToHex(byte[] bytes) {
+	    final char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+	    char[] hexChars = new char[bytes.length * 2];
+	    int v;
+	    for ( int j = 0; j < bytes.length; j++ ) {
+	        v = bytes[j] & 0xFF;
+	        hexChars[j * 2] = hexArray[v >>> 4];
+	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+	    }
+	    return new String(hexChars);
+	}
+	
+	public byte[] CalculateHash() {
+		
+		BLAKE2b_Algorithm hasher = new BLAKE2b_Algorithm();
+		hasher.Init();
+		
+		for (int i = 0; i < splitArrayLength; i++) {
+			hasher.Compress(splitBlock_array[i]);
+		}
+		
+		return hasher.getHash();
+		
 	}
 	
 	private byte[] PadBytes(byte[] input) throws Exception {
