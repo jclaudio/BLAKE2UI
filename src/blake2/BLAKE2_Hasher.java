@@ -1,5 +1,12 @@
 package blake2;
 
+// Written by Jonathan Claudio and Craig Strange
+//
+//
+//
+//
+//
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -8,58 +15,69 @@ public class BLAKE2_Hasher {
 
 	private byte[] messageBlock;
 	private ArrayList<byte[]> splitBlock = new ArrayList<byte[]>();
-	private byte[][] splitBlock_array;
 	private byte[] currentBlock = new byte[128];
 	
-	private int messageBlockLength;
-	private int splitArrayLength;
+	private int messageBlockLength = 0;
+	private int splitArrayLength = 0;
 	
-	public BLAKE2_Hasher(String input) throws Exception {
-		this.messageBlock = input.getBytes();
+	public BLAKE2_Hasher(byte[] input) throws Exception {
+		this.messageBlock = input;
 		messageBlockLength = messageBlock.length;
 		
-		if (messageBlock.length == 128) {
+		// If byte stream is exactly 128 bytes long
+		if (messageBlockLength == 128) {
 			splitArrayLength = 1;
+			currentBlock = messageBlock;
 		}
 		
-		if (messageBlock.length < 128) {
-			PadBytes(messageBlock);
+		// If byte stream is less than 128 bytes
+		if (messageBlockLength < 128) {
 			splitArrayLength = 1;
+			currentBlock = PadBytes(messageBlock);
 		}
 		
-		if (messageBlock.length > 128) {
+		// If byte stream is longer than 128 bytes - INCOMPLETE
+		if (messageBlockLength > 128) {	
 			splitArrayLength = CalculateSplitArrayLength(messageBlock);
-			byte[] tempArray2 = new byte[128];
-			
-			// if the message block is a multiple of 128, copy directly
-			if (messageBlock.length % 128 == 0) {
-				
-				for (int i = 0; i < splitArrayLength; i++) {
-					byte[] tempArray = new byte[128];
-					int offset = i * 128;
-					System.arraycopy(messageBlock, offset, tempArray, 0, 128);
-					
-					splitBlock.add(tempArray);
-				}
-			} else {
-				for (int i = 0; i < (splitArrayLength - 1); i++) {
-					byte[] tempArray = new byte[128];
-					int offset = i * 128;
-					System.arraycopy(messageBlock, offset, tempArray, 0, 128);
-					
-					splitBlock.add(tempArray);
-				}
-				// Last bit in the array
-				System.arraycopy(messageBlock, splitArrayLength, tempArray2, (splitArrayLength * 128) - 1, messageBlock.length - (splitArrayLength*128));
-				tempArray2 = PadBytes(tempArray2);
-			}
-			splitBlock_array = new byte[splitBlock.size()][];
-			splitBlock_array = splitBlock.toArray(splitBlock_array);
-		}
-	}
+		
+			// If message block is multiple of 128.  Which it probably won't be.
+			if (messageBlockLength % 128 == 0) {
 	
-	public BLAKE2_Hasher(byte[] input) {
-		this.messageBlock = input;
+				for (int i = 0; i < splitArrayLength; i++) {
+					int offset = 0;
+					byte[] buffer = new byte[128];
+					
+					offset = i * 128;
+					
+					try {
+						System.arraycopy(messageBlock, offset, buffer, 0, 128);
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+					splitBlock.add(buffer);
+				}
+			// If message block is not a multiple of 128
+			} else {
+				for (int i = 0; i < splitArrayLength - 1; i++) {
+					int offset = 0;
+					byte[] buffer = new byte[128];
+					
+					offset = i * 128;
+					
+					System.arraycopy(messageBlock, offset, buffer, 0, 128);
+					
+					splitBlock.add(buffer);
+				}
+				
+				int trailerLength = (messageBlockLength - ((splitArrayLength - 1) * 128));
+				int offset = (splitArrayLength - 1) * 128;
+				byte[] buffer2 = new byte[128];
+				buffer2 = PadBytes(buffer2);
+				
+				System.arraycopy(messageBlock, offset, buffer2, 0, trailerLength);
+			}
+		}	
 	}
 	
 	public String bytesToHex(byte[] bytes) {
@@ -75,16 +93,23 @@ public class BLAKE2_Hasher {
 	}
 	
 	public byte[] CalculateHash() {
+		BLAKE2b_Algorithm blake2b = new BLAKE2b_Algorithm();
+		blake2b.Init();
+		byte[] output = new byte[64];
 		
-		BLAKE2b_Algorithm hasher = new BLAKE2b_Algorithm();
-		hasher.Init();
-		
-		for (int i = 0; i < splitArrayLength; i++) {
-			hasher.Compress(splitBlock_array[i]);
+		if (messageBlockLength > 128) {
+			for (int i = 0; i < splitBlock.size(); i++) {
+				byte[] currentBlock;
+				
+				currentBlock = splitBlock.get(i);
+				blake2b.Compress(currentBlock);
+			}
+		} else {
+			blake2b.Compress(currentBlock);
 		}
 		
-		return hasher.getHash();
-		
+		output = blake2b.getHash();
+		return output;
 	}
 	
 	private byte[] PadBytes(byte[] input) throws Exception {
@@ -111,7 +136,6 @@ public class BLAKE2_Hasher {
 	private int CalculateSplitArrayLength(byte[] input) {
 		int arrayLength = input.length;
 		int splitArrayLength = (arrayLength / 128) + 1;
-		
 		return splitArrayLength;
 		
 	}

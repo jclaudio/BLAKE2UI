@@ -30,8 +30,8 @@ public class BLAKE2b_Algorithm {
 	private Boolean _isInitialized = false;
 	
 	// Assorted constants
-	private final int NumberOfRounds = 12;
-	private final int BlockSizeInBytes = 128;
+	private final int NUMBER_OF_ROUNDS = 12;
+	private final int BLOCK_SIZE_IN_BYTES = 128;
 	
 	// BLAKE2B permutations table
 	private int[] Sigma = {
@@ -72,10 +72,13 @@ public class BLAKE2b_Algorithm {
 	
 	public void Compress(byte[] block)
 	{
-		
+		// Convert block into long
+		long[] m = new long[16];
+		m = byteArrayToLongArray(block);
 		long[] h = _h;
-		long[] m = _m;
 
+		m = byteArrayToLongArray(block);
+		
 		long v0 = h[0];
 		long v1 = h[1];
 		long v2 = h[2];
@@ -94,7 +97,7 @@ public class BLAKE2b_Algorithm {
 		long v14 = IV6 ^ _finalizationFlag0;
 		long v15 = IV7 ^ _finalizationFlag1;
 
-		for (int r = 0; r < NumberOfRounds; ++r)
+		for (int r = 0; r < NUMBER_OF_ROUNDS; ++r)
 		{
 			// G0 (r,0,v0,v4,v8,v12) 
 			v0 = v0 + v4 + m[Sigma[16 * r + 2 * 0 + 0]];
@@ -209,7 +212,6 @@ public class BLAKE2b_Algorithm {
 			v4 = ((v4 >> 63) | (v4 << (64 - 63)));
 		}
 
-		
 		h[0] ^= v0 ^ v8;
 		h[1] ^= v1 ^ v9;
 		h[2] ^= v2 ^ v10;
@@ -235,14 +237,26 @@ public class BLAKE2b_Algorithm {
 		return output;
 	}
 	
+	// Conversion from byte array to long array
+	private long[] byteArrayToLongArray (byte[] block) {
+		long[] output = new long[16];
+
+		for (int i = 0; i < output.length; i++) {
+			int offset = i * 8;
+			output[i] = byteArrayToLong(block, offset);
+		}
+		
+		return output;
+	}
+	
 	// Conversion from long to byte array
-	public long byteArrayToLong(byte[] b, int offset) {
+	private long byteArrayToLong(byte[] b, int offset) {
 		ByteBuffer buf = ByteBuffer.wrap(b);
 		return buf.getLong(offset);
 	}
 	
 	// Conversion from byte array to long
-	public byte[] longToByteArray(long l) {
+	private byte[] longToByteArray(long l) {
 		byte b[] = new byte[8];
 		ByteBuffer buf = ByteBuffer.wrap(b);
 		buf.putLong(l);
@@ -261,10 +275,6 @@ public class BLAKE2b_Algorithm {
 	    }
 	    return new String(hexChars);
 	}
-
-    public void Reset() {
-    	
-    }
 }
 
 	
